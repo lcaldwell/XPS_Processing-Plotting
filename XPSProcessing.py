@@ -34,28 +34,38 @@ class XPSDataSet:
         self.BE_shift = self.get_BE_shift()
 
     def get_BE_shift(self):
+        # Some files have more entries into columns under what we are interested
+        # in, this code only includes entries in 'Peak BE' column up to first
+        # nan value
         peaks_frame = self.file.parse('Peak Table', header=1)
-        return (peaks_frame['Peak BE'] - C_PEAK_BE).abs().min()
+        peaks_column = peaks_frame['Peak BE']
+        list_of_nans = peaks_column.isna()
+        if list_of_nans.values.any():
+            final_peak_index = peaks_column.index[list_of_nans][0] - 1
+        else:
+            final_peak_index = len(peaks_column)
+        return (peaks_column[:final_peak_index] - C_PEAK_BE).abs().min()
 
-    def get_scan_data(self, scan_name):
-        scan = ElementScan(self.file, scan_name)
-        return scan
+    def get_scan_data(self, scan_name, normalisation):
+        scan = ElementScan(self, scan_name)
+        return scan.get_scan_data(normalisation)
 
 
 class ElementScan:
     plot_upper_limit = 0
     plot_lower_limit = 0
 
-    def __init__(self, file, scan_name):
-        self.file = file
+    def __init__(self, parent_scan, scan_name):
+        self.parent_scan = parent_scan
         self.scan_name = scan_name
         self.data = self.process_sheet()
+        self.shift_BEs()
 
     def process_sheet(self):
         # column names are on row 13
         header_row = 13
 
-        frame = self.file.parse(sheet_name=self.scan_name, header=header_row)
+        frame = self.parent_scan.file.parse(sheet_name=self.scan_name, header=header_row)
         # drop columns 1 and 3 because they are always empty
         frame = frame.drop([frame.columns[1], frame.columns[3]], axis=1)
 
@@ -66,6 +76,21 @@ class ElementScan:
         frame.drop(0, axis=0, inplace=True)
 
         return frame
+
+    def get_scan_data(self, normalisation):
+        df = self.crop_data_to_plot_range()
+        unshifted_y_series = df['Raw']
+        y_shift = self.calculate_y_shift()
+        shifted_y_series = unshifted_y_series.subtract(y_shift)
+        normalised_y_series = shifted_y_series.multiply(1/normalisation)
+
+        x_values = df[BE_NAME].tolist()
+        y_values = normalised_y_series.tolist()
+        return (x_values, y_values)
+
+    def shift_BEs(self):
+        BE_shift = self.parent_scan.BE_shift
+        self.data[BE_NAME].subtract(BE_shift)
 
     def crop_data_to_plot_range(self):
         plot_range = RANGES_FOR_PLOTTING[self.scan_name]
