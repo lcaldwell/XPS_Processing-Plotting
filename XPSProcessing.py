@@ -8,7 +8,7 @@ import pandas as pd
 RANGES_FOR_AVERAGING = {
     'Survey': (-10, 0),
     'C1s Scan': (280, 282),
-    'O1s Scan': (523, 525),
+    'O1s Scan': (525, 526.5),
     'Fe2p Scan': (700, 702),
     'Si2p Scan': (95, 96)
 }
