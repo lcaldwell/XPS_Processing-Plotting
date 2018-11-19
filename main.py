@@ -15,5 +15,5 @@ def Make_Comparison_Plot(file_names, normalisations, legend_names, scan_types, o
         for j in range(len(scan_types)):
             data[j].append(dataset.get_scan_data(scan_types[j], normalisation))
 
-    Plot_Comparison(data, scan_types, output_file_name)
+    Plot_Comparison(data, scan_types, legend_names, output_file_name)
     
