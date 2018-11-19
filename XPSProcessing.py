@@ -8,7 +8,7 @@ import pandas as pd
 RANGES_FOR_AVERAGING = {
     'Survey': (-10, 0),
     'C1s Scan': (280, 282),
-    'O1s Scan': (521, 523),
+    'O1s Scan': (523, 525),
     'Fe2p Scan': (700, 702),
     'Si2p Scan': (95, 96)
 }
@@ -104,6 +104,8 @@ class ElementScan:
         av_range = RANGES_FOR_AVERAGING[self.scan_name]
         mask = (self.data[BE_NAME] > av_range[0]) & (
             self.data[BE_NAME] < av_range[1])
+        if not mask.values.any(): 
+            raise Exception('No values between range specified for y shift')
         y_shift = self.data['Raw'][mask].mean()
 
         return y_shift
