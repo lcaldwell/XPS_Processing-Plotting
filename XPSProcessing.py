@@ -24,8 +24,11 @@ RANGES_FOR_PLOTTING = {
 # Name for Binding Energy column
 BE_NAME = 'Binding Energy (E)'
 
-# Binding energy of C peak to shift values by
-C_PEAK_BE = 285
+# Binding energy of various peaks
+C1s_PEAK_BE = 285
+O1s_PEAK_BE = 538
+
+
 
 
 class XPSDataSet:
@@ -34,21 +37,47 @@ class XPSDataSet:
         self.BE_shift = self.get_BE_shift()
 
     def get_BE_shift(self):
-        # Some files have more entries into columns under what we are interested
-        # in, this code only includes entries in 'Peak BE' column up to first
-        # nan value
-        peaks_frame = self.file.parse('Peak Table', header=1)
+        peaks_frame = self.get_cropped_peaks_sheet()
         peaks_column = peaks_frame['Peak BE']
-        list_of_nans = peaks_column.isna()
-        if list_of_nans.values.any():
-            final_peak_index = peaks_column.index[list_of_nans][0] - 1
-        else:
-            final_peak_index = len(peaks_column)
-        return (peaks_column[:final_peak_index] - C_PEAK_BE).abs().min()
+        return (peaks_column - C1s_PEAK_BE).abs().min()
 
-    def get_scan_data(self, scan_name, normalisation):
+    def get_scan_data(self, scan_name, normalisation_type):
         scan = ElementScan(self, scan_name)
+        normalisation = self.get_normalisation(normalisation_type)
+        print(normalisation)
         return scan.get_scan_data(normalisation)
+
+    def get_normalisation(self, normalisation_type):
+        peaks_frame = self.get_cropped_peaks_sheet()
+        name_column = peaks_frame['Name ']
+        area_column = peaks_frame['Area (P) CPS.eV']
+        peak_centres_column = peaks_frame['Peak BE']
+        if normalisation_type == 'OCFe':
+            # Include all peaks of O, C and Fe
+            matches = name_column.str.contains(r'^(?:O|C|Fe)\d')
+        elif normalisation_type == 'Fe':
+            # Include all peaks of Fe
+            matches = name_column.str.contains(r'^Fe\d')
+        elif normalisation_type == 'C1s':
+            distances = (peak_centres_column - C1s_PEAK_BE).abs()
+            matches = (distances == distances.min())
+        elif normalisation_type == 'O1s':
+            distances = (peak_centres_column - O1s_PEAK_BE).abs()
+            matches = (distances == distances.min()) 
+        else:
+            raise Exception("normalisation_type not recognised")
+        return area_column[matches].sum()
+
+    def get_cropped_peaks_sheet(self):
+        peaks_frame = self.file.parse('Peak Table', header=1)
+        peak_centre_column = peaks_frame['Peak BE']
+        list_of_nans = peak_centre_column.isna()
+        if list_of_nans.values.any():
+            final_peak_index = peak_centre_column.index[list_of_nans][0]
+        else:
+            final_peak_index = len(peak_centre_column)
+        return peaks_frame.iloc[:final_peak_index,:]
+ 
 
 
 class ElementScan:
