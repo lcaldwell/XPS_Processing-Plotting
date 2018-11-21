@@ -52,16 +52,16 @@ class XPSDataSet:
         name_column = peaks_frame['Name ']
         area_column = peaks_frame['Area (P) CPS.eV']
         peak_centres_column = peaks_frame['Peak BE']
-        if normalisation_type == 'OCFe':
+        if normalisation_type == 'TC_OCFe':
             # Include all peaks of O, C and Fe
             matches = name_column.str.contains(r'^(?:O|C|Fe)\d')
         elif normalisation_type == 'Fe':
             # Include all peaks of Fe
             matches = name_column.str.contains(r'^Fe\d')
-        elif normalisation_type == 'C1s':
+        elif normalisation_type == 'C-C':
             distances = (peak_centres_column - C1s_PEAK_BE).abs()
             matches = (distances == distances.min())
-        elif normalisation_type == 'O1s':
+        elif normalisation_type == 'M-O':
             distances = (peak_centres_column - O1s_PEAK_BE).abs()
             matches = (distances == distances.min()) 
         else:
