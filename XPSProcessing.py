@@ -26,7 +26,7 @@ BE_NAME = 'Binding Energy (E)'
 
 # Binding energy of various peaks
 C1s_PEAK_BE = 285
-O1s_PEAK_BE = 538
+O1s_PEAK_BE = 530
 
 
 
