@@ -18,5 +18,5 @@ def Make_Comparison_Plot(file_names, normalisation_type, legend_names, scan_type
 
 def Make_Multiple_Comparison_Plot(files, normalisation_list, legend_names, scan_types, output_file_names):
     for i in range(len(normalisation_list)):
-        Make_Comparison_Plot(files, normalisation_list[i], legend_names, scan_types, output_file_names[i])
+        Make_Comparison_Plot(files, normalisation_list[i], legend_names, scan_types, output_file_names + str(normalisation_list[i]) + '.pdf')
     
