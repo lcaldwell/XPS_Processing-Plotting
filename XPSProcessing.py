@@ -47,6 +47,20 @@ class XPSDataSet:
         print(normalisation)
         return scan.get_scan_data(normalisation)
 
+    def get_fit_data(self, scan_name, normalisation_type):
+        scan = ElementScan(self, scan_name)
+        normalisation = self.get_normalisation(normalisation_type)
+        fit_names = scan.get_fit_names()
+        fits_data = []
+        for fit_name in fit_names:
+            fits_data.append(scan.get_fit_data(fit_name, normalisation))
+        return fits_data
+    
+    def get_envelope_data(self, scan_name, normalisation_type):
+        scan = ElementScan(self, scan_name)
+        normalisation = self.get_normalisation(normalisation_type)
+        return scan.get_envelope_data(normalisation)
+
     def get_normalisation(self, normalisation_type):
         peaks_frame = self.get_cropped_peaks_sheet()
         name_column = peaks_frame['Name ']
@@ -87,10 +101,10 @@ class ElementScan:
     def __init__(self, parent_scan, scan_name):
         self.parent_scan = parent_scan
         self.scan_name = scan_name
-        self.data = self.process_sheet()
+        self.data = self.preprocess_sheet()
         self.shift_BEs()
 
-    def process_sheet(self):
+    def preprocess_sheet(self):
         # column names are on row 13
         header_row = 13
 
@@ -104,11 +118,20 @@ class ElementScan:
         # drop first row (just defines units which are all the same)
         frame.drop(0, axis=0, inplace=True)
 
+        # drop any remaining unnamed columns
+        frame = frame.iloc[:, ~frame.columns.str.contains(r'^Unnamed: \d+')]
+
         return frame
 
-    def get_scan_data(self, normalisation):
+    def get_fit_names(self):
+        NON_FIT_NAMES = ['Binding Energy (E)', 'Raw', 'Envelope', 'Residuals']
+        column_names = self.data.columns
+        fit_names = [x for x in column_names if not x in NON_FIT_NAMES]
+        return fit_names
+
+    def process_data(self, name, normalisation):
         df = self.crop_data_to_plot_range()
-        unshifted_y_series = df['Raw']
+        unshifted_y_series = df[name]
         y_shift = self.calculate_y_shift()
         shifted_y_series = unshifted_y_series.subtract(y_shift)
         normalised_y_series = shifted_y_series.multiply(1/normalisation)
@@ -116,6 +139,15 @@ class ElementScan:
         x_values = df[BE_NAME].tolist()
         y_values = normalised_y_series.tolist()
         return (x_values, y_values)
+
+    def get_scan_data(self, normalisation):
+        return self.process_data('Raw', normalisation)
+        
+    def get_fit_data(self, fit_name, normalisation):
+        return self.process_data(fit_name, normalisation)
+
+    def get_envelope_data(self, normalisation):
+        return self.process_data('Envelope', normalisation)
 
     def shift_BEs(self):
         BE_shift = self.parent_scan.BE_shift
